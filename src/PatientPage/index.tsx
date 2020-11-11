@@ -38,6 +38,19 @@ const PatientPage: React.FC = () => {
       </h2>
       <div>SSN: {patient.ssn}</div>
       <div>Occupation: {patient.occupation}</div>
+      <h4>Entries</h4>
+      {patient.entries?.map((entry) => (
+        <div key={entry.id}>
+          <div>
+            {entry.date} {entry.description}
+          </div>
+          <ul>
+            {entry.diagnosisCodes?.map((code, i) => (
+              <li key={i}>{code}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
     </div>
   );
 };
