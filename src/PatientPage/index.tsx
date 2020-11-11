@@ -1,14 +1,14 @@
 import React from "react";
 import { useParams } from "react-router-dom";
-import { updatePatient, useStateValue } from "../state";
+import { setDiagnosisList, updatePatient, useStateValue } from "../state";
 import { apiBaseUrl } from "../constants";
-import { Patient } from "../types";
+import { Diagnosis, Patient } from "../types";
 import Axios from "axios";
 import GenderIcon from "../components/GenderIcon";
 
 const PatientPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [{ patients }, dispatch] = useStateValue();
+  const [{ patients, diagnoses }, dispatch] = useStateValue();
 
   const patient = patients[id];
 
@@ -27,7 +27,21 @@ const PatientPage: React.FC = () => {
     if (!patient || !patient.ssn) fetchPatient();
   }, [dispatch, id, patient]);
 
-  if (!patient) {
+  React.useEffect(() => {
+    const fetchDiagnoses = async () => {
+      try {
+        const { data: diagnoses } = await Axios.get<Diagnosis[]>(
+          `${apiBaseUrl}/diagnoses`
+        );
+        dispatch(setDiagnosisList(diagnoses));
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    if (Object.keys(diagnoses).length === 0) fetchDiagnoses();
+  }, [dispatch, diagnoses]);
+
+  if (!patient || Object.keys(diagnoses).length === 0) {
     return null;
   }
 
@@ -46,7 +60,9 @@ const PatientPage: React.FC = () => {
           </div>
           <ul>
             {entry.diagnosisCodes?.map((code, i) => (
-              <li key={i}>{code}</li>
+              <li key={i}>
+                {code}: {diagnoses[code].name}
+              </li>
             ))}
           </ul>
         </div>
