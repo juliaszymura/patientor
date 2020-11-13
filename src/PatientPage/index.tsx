@@ -5,6 +5,8 @@ import { apiBaseUrl } from "../constants";
 import { Diagnosis, Patient } from "../types";
 import Axios from "axios";
 import GenderIcon from "../components/GenderIcon";
+import EntryDetails from "../EntryDetails";
+import { Header, List } from "semantic-ui-react";
 
 const PatientPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -47,26 +49,23 @@ const PatientPage: React.FC = () => {
 
   return (
     <div className="App">
-      <h2>
+      <Header as="h2">
         {patient.name} <GenderIcon gender={patient.gender} />
-      </h2>
+      </Header>
       <div>SSN: {patient.ssn}</div>
       <div>Occupation: {patient.occupation}</div>
-      <h4>Entries</h4>
-      {patient.entries?.map((entry) => (
-        <div key={entry.id}>
-          <div>
-            {entry.date} {entry.description}
-          </div>
-          <ul>
-            {entry.diagnosisCodes?.map((code, i) => (
-              <li key={i}>
-                {code}: {diagnoses[code].name}
-              </li>
+      {patient.entries?.length !== 0 && (
+        <>
+          <Header as="h3">Entries</Header>
+          <List celled>
+            {patient.entries?.map((entry) => (
+              <List.Item key={entry.id}>
+                <EntryDetails entry={entry} />
+              </List.Item>
             ))}
-          </ul>
-        </div>
-      ))}
+          </List>
+        </>
+      )}
     </div>
   );
 };
