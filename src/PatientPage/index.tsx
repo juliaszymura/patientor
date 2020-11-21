@@ -2,7 +2,7 @@ import React from "react";
 import { useParams } from "react-router-dom";
 import { setDiagnosisList, updatePatient, useStateValue } from "../state";
 import { apiBaseUrl } from "../constants";
-import { Diagnosis, Patient } from "../types";
+import { Diagnosis, EntryFormValuesOmitUnion, Patient } from "../types";
 import Axios from "axios";
 import GenderIcon from "../components/GenderIcon";
 import EntryDetails from "./EntryDetails";
@@ -25,10 +25,80 @@ const PatientPage: React.FC = () => {
   };
 
   const submitNewEntry = async (values: EntryFormValues) => {
+    // build base new entry
+    const valuesWithOptionals = values as EntryFormValuesOmitUnion;
+    const baseEntryWithoutDiagnosisCodes = {
+      type: valuesWithOptionals.type,
+      date: valuesWithOptionals.date,
+      description: valuesWithOptionals.description,
+      specialist: valuesWithOptionals.specialist,
+    };
+
+    // add optional diagnosis codes
+    let baseEntry;
+    if (valuesWithOptionals.diagnosisCodes?.length !== 0) {
+      baseEntry = {
+        ...baseEntryWithoutDiagnosisCodes,
+        diagnosisCodes: valuesWithOptionals.diagnosisCodes,
+      };
+    } else {
+      baseEntry = { ...baseEntryWithoutDiagnosisCodes };
+    }
+
+    // add required and optional properties for each type
+    let entryToSave;
+    switch (valuesWithOptionals.type) {
+      case "Hospital":
+        if (
+          valuesWithOptionals.discharge?.date !== "" &&
+          valuesWithOptionals.discharge?.criteria !== ""
+        ) {
+          entryToSave = {
+            ...baseEntry,
+            discharge: valuesWithOptionals.discharge,
+            type: "Hospital",
+          };
+        } else {
+          entryToSave = { ...baseEntry, type: "Hospital" };
+        }
+        break;
+      case "HealthCheck":
+        entryToSave = {
+          ...baseEntry,
+          healthCheckRating: valuesWithOptionals.healthCheckRating,
+          type: "HealthCheck",
+        };
+        break;
+      case "OccupationalHealthcare":
+        const entryWithEmployerName = {
+          ...baseEntry,
+          employerName: valuesWithOptionals.employerName,
+        };
+        if (
+          valuesWithOptionals.sickLeave?.startDate !== "" &&
+          valuesWithOptionals.sickLeave?.endDate !== ""
+        ) {
+          entryToSave = {
+            ...entryWithEmployerName,
+            sickLeave: valuesWithOptionals.sickLeave,
+            type: "OccupationalHealthcare",
+          };
+        } else {
+          entryToSave = {
+            ...entryWithEmployerName,
+            type: "OccupationalHealthcare",
+          };
+        }
+        break;
+      default:
+        console.error(`Discriminated union type: ${values.type}`);
+    }
+
+    // attempt to save patient
     try {
       const { data: updatedPatient } = await Axios.post<Patient>(
         `${apiBaseUrl}/patients/${id}/entries`,
-        values
+        entryToSave
       );
       dispatch(updatePatient(updatedPatient));
       closeModal();

@@ -1,6 +1,6 @@
 import React from "react";
 import { Grid, Button, Form as SemanticUiForm } from "semantic-ui-react";
-import { Field, Formik, Form } from "formik";
+import { Field, Formik, Form, ErrorMessage } from "formik";
 
 import {
   DiagnosisSelection,
@@ -60,13 +60,18 @@ export const AddEntryForm: React.FC<AddEntryFormProps> = ({
   const hospitalDischarge = () => {
     return (
       <SemanticUiForm.Field>
-        <label>Discharge</label>
+        <label>
+          Discharge
+          <div style={{ color: "red" }}>
+            <ErrorMessage name="discharge" />
+          </div>
+        </label>
         <Field
           label="Date"
           placeholder="Discharge date"
           name="discharge.date"
           component={TextField}
-        />
+        ></Field>
         <Field
           label="Criteria"
           placeholder="Criteria"
@@ -83,9 +88,40 @@ export const AddEntryForm: React.FC<AddEntryFormProps> = ({
         label={"Rating"}
         name={"healthCheckRating"}
         min={0}
-        max={4}
+        max={3}
         component={NumberField}
       />
+    );
+  };
+
+  const occupationalHealthcareFields = () => {
+    return (
+      <SemanticUiForm.Field>
+        <Field
+          label="Employer name"
+          placeholder="Employer name"
+          name="employerName"
+          component={TextField}
+        />
+        <label>
+          Sick Leave{" "}
+          <div style={{ color: "red" }}>
+            <ErrorMessage name="sickLeave" />
+          </div>
+        </label>
+        <Field
+          label="Start date"
+          placeholder="Start date"
+          name="sickLeave.startDate"
+          component={TextField}
+        />
+        <Field
+          label="End date"
+          placeholder="End date"
+          name="sickLeave.endDate"
+          component={TextField}
+        />
+      </SemanticUiForm.Field>
     );
   };
 
@@ -93,15 +129,20 @@ export const AddEntryForm: React.FC<AddEntryFormProps> = ({
     <Formik
       initialValues={{
         type: EntryType.OccupationalHealthcare,
-        date: "1111-11-11",
-        description: "fdsgfghj",
-        specialist: "dsjhgk",
+        date: "",
+        description: "",
+        specialist: "",
         diagnosisCodes: [],
         discharge: {
           date: "",
           criteria: "",
         },
-        healthCheckRating: 2,
+        healthCheckRating: 0,
+        employerName: "",
+        sickLeave: {
+          startDate: "",
+          endDate: "",
+        },
       }}
       onSubmit={onSubmit}
       validate={(values) => {
@@ -116,11 +157,35 @@ export const AddEntryForm: React.FC<AddEntryFormProps> = ({
         if (!values.specialist) {
           errors.specialist = requiredError;
         }
-        if (!values.healthCheckRating) {
-          errors.healthCheckRating = requiredError;
+        if (!values.employerName && values.type === "OccupationalHealthcare") {
+          errors.employerName = requiredError;
         }
-        if (values.healthCheckRating < 0 || values.healthCheckRating > 3) {
-          errors.healthCheckRating = "Value must be between 1-4";
+        if (values.healthCheckRating < -1 || values.healthCheckRating > 3) {
+          errors.healthCheckRating = "Value must be between 0-3";
+        }
+        if (
+          (values.sickLeave.endDate && !values.sickLeave.startDate) ||
+          (!values.sickLeave.endDate && values.sickLeave.startDate)
+        ) {
+          errors.sickLeave = "Start and end date fields are required";
+        }
+        if (
+          (values.discharge.date && !values.discharge.criteria) ||
+          (!values.discharge.date && values.discharge.criteria)
+        ) {
+          errors.discharge = "Date and criteria fields are required";
+        }
+        if (values.discharge.date && !Date.parse(values.discharge.date)) {
+          errors.discharge = "Discharge date must be a date (yyyy-mm-dd)";
+        }
+        if (
+          values.sickLeave.startDate &&
+          !Date.parse(values.sickLeave.startDate)
+        ) {
+          errors.sickLeave = "Start date date must be a date (yyyy-mm-dd)";
+        }
+        if (values.sickLeave.endDate && !Date.parse(values.sickLeave.endDate)) {
+          errors.sickLeave = "End date must be a date (yyyy-mm-dd)";
         }
         return errors;
       }}
@@ -158,7 +223,8 @@ export const AddEntryForm: React.FC<AddEntryFormProps> = ({
             />
             {values.type === EntryType.Hospital && hospitalDischarge()}
             {values.type === EntryType.HealthCheck && healthCheckRating()}
-            {console.log(values)}
+            {values.type === EntryType.OccupationalHealthcare &&
+              occupationalHealthcareFields()}
             <Grid>
               <Grid.Column floated="left" width={5}>
                 <Button type="button" onClick={onCancel} color="red">
@@ -170,10 +236,7 @@ export const AddEntryForm: React.FC<AddEntryFormProps> = ({
                   type="submit"
                   floated="right"
                   color="green"
-                  disabled={
-                    // !dirty ||
-                    !isValid
-                  }
+                  disabled={!dirty || !isValid}
                 >
                   Add
                 </Button>
